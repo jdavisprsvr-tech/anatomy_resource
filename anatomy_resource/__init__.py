@@ -1,7 +1,13 @@
 from flask import Flask
+
 from .config import config_map
-from .extensions import db, migrate
+from .extensions import db, migrate, jwt
 from .main import main_bp
+from .auth import auth_bp
+from .auth.models import User
+from .anatomy.models import AnatomyEntry
+from .anatomy.routes import anatomy_bp
+
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -13,10 +19,15 @@ def create_app(config_name):
 
     app.config.from_object(config_class)
 
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        raise ValueError("DATABASE_URL must be set for this environment")
 
     db.init_app(app)
     migrate.init_app(app, db)
+    jwt.init_app(app)
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(anatomy_bp)
 
     return app
