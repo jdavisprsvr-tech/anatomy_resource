@@ -12,26 +12,77 @@ from . import auth_bp
 from .models import User
 
 
+
+
+
+
 @auth_bp.post("/register")
 def register():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
 
-    username = data.get("username", "").strip()
-    email = data.get("email", "").strip().lower()
-    password = data.get("password", "")
+    if not isinstance(data, dict):
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "A valid JSON object is required"
+        }), 400
 
-    if not username or not email or not password:
-        return jsonify({"error": "All fields are required"}), 400
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
 
-    if len(username) < 3 or len(password) < 8 or "@" not in email:
-        return jsonify({"error": "Invalid registration details"}), 400
+    if not isinstance(username, str) or not username.strip():
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "username is required"
+        }), 400
+
+    if not isinstance(email, str) or not email.strip():
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "email is required"
+        }), 400
+
+    if not isinstance(password, str) or not password:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "password is required"
+        }), 400
+
+    username = username.strip()
+    email = email.strip().lower()
+
+    if not 3 <= len(username) <= 80:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "username must be between 3 and 80 characters"
+        }), 400
+
+    if len(email) > 120 or "@" not in email:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "email must be valid and no longer than 120 characters"
+        }), 400
+
+    if not 8 <= len(password) <= 128:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "password must be between 8 and 128 characters"
+        }), 400
 
     existing_user = User.query.filter(
         (User.username == username) | (User.email == email)
     ).first()
 
     if existing_user:
-        return jsonify({"error": "Username or email already exists"}), 409
+        if existing_user.username == username:
+            message = "username already in use"
+        else:
+            message = "email already in use"
+
+        return jsonify({
+            "code": "CONFLICT",
+            "message": message
+        }), 409
 
     user = User(username=username, email=email)
     user.set_password(password)
@@ -40,63 +91,119 @@ def register():
     db.session.commit()
 
     return jsonify({
-        "message": "User registered successfully",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-        },
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "created_at": user.created_at.isoformat()
     }), 201
+
 
 
 @auth_bp.post("/admin_register")
 def admin_register():
-    data = request.get_json(silent=True) or {}
-
-    invite_code = data.get("invite_code", "")
     expected_code = current_app.config.get("CONTENT_EDITOR_INVITE_CODE")
 
     if not expected_code:
-        return jsonify({"error": "Editor registration is unavailable"}), 503
+        return jsonify({
+            "code": "SERVICE_UNAVAILABLE",
+            "message": "Editor registration is unavailable"
+        }), 503
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "A valid JSON object is required"
+        }), 400
+
+    invite_code = data.get("invite_code")
 
     if not isinstance(invite_code, str) or not secrets.compare_digest(
         invite_code, expected_code
     ):
-        return jsonify({"error": "Invalid invitation code"}), 403
+        return jsonify({
+            "code": "INVALID_INVITE_CODE",
+            "message": "Invalid invitation code"
+        }), 403
 
-    username = data.get("username", "").strip()
-    email = data.get("email", "").strip().lower()
-    password = data.get("password", "")
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
 
-    if not username or not email or not password:
-        return jsonify({"error": "All fields are required"}), 400
+    if not isinstance(username, str) or not username.strip():
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "username is required"
+        }), 400
 
-    if len(username) < 3 or len(password) < 8 or "@" not in email:
-        return jsonify({"error": "Invalid registration details"}), 400
+    if not isinstance(email, str) or not email.strip():
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "email is required"
+        }), 400
+
+    if not isinstance(password, str) or not password:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "password is required"
+        }), 400
+
+    username = username.strip()
+    email = email.strip().lower()
+
+    if not 3 <= len(username) <= 80:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "username must be between 3 and 80 characters"
+        }), 400
+
+    if len(email) > 120 or "@" not in email:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "email must be valid and no longer than 120 characters"
+        }), 400
+
+    if not 8 <= len(password) <= 128:
+        return jsonify({
+            "code": "VALIDATION_ERROR",
+            "message": "password must be between 8 and 128 characters"
+        }), 400
 
     existing_user = User.query.filter(
         (User.username == username) | (User.email == email)
     ).first()
 
     if existing_user:
-        return jsonify({"error": "Username or email already exists"}), 409
+        if existing_user.username == username:
+            message = "username already in use"
+        else:
+            message = "email already in use"
 
-    user = User(username=username, email=email, role="content_editor")
+        return jsonify({
+            "code": "CONFLICT",
+            "message": message
+        }), 409
+
+    user = User(
+        username=username,
+        email=email,
+        role="content_editor"
+    )
     user.set_password(password)
 
     db.session.add(user)
     db.session.commit()
 
     return jsonify({
-        "message": "Content Editor registered successfully",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-        },
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "created_at": user.created_at.isoformat()
     }), 201
+
 
 
 @auth_bp.post("/login")

@@ -1,5 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..extensions import db
+from sqlalchemy import func
 
 
 class User(db.Model):
@@ -10,6 +11,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(30), nullable=False, default="user")
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
