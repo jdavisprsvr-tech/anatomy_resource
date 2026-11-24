@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 
 from .config import config_map
 from .extensions import db, migrate, jwt
@@ -25,6 +25,12 @@ def create_app(config_name):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error_message):
+        return jsonify({"error": "Invalid or tampered token"}), 401
+
+    
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
